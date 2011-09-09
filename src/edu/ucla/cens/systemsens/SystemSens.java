@@ -599,6 +599,8 @@ public class SystemSens extends Service
 
 
         }
+
+        mContextClients.finishBroadcast();
     }
 
     public boolean hasContextReceivers()
@@ -793,8 +795,10 @@ public class SystemSens extends Service
     public IBinder onBind(Intent intent) {
         if (IPowerMonitor.class.getName().equals(intent.getAction()))
             return mPowerMonitorBinder;
+        
         if (IContextMonitor.class.getName().equals(intent.getAction()))
-        	return mContextMonitorBinder;
+            return mContextMonitorBinder;
+
         return null;
     }
 
@@ -1654,6 +1658,7 @@ public class SystemSens extends Service
         List<Double> nextWorkLimit;
         double curWorkSum;
         boolean bootStrap = true;
+        double newRate;
 
         for (int i = 0; i < clientCount; i++)
         {
@@ -1685,11 +1690,16 @@ public class SystemSens extends Service
                         {
                             /* Rate-based policy */
                             curWorkSum = queue.getSum();
-                            if (curWorkSum > 0.0)
+                            newRate = mPowerModel.suggestRate("gps");
+                            if (curWorkSum > 0.0) 
                                 bootStrap = false;
+                            if (Double.isNaN(newRate))
+                            {
+                                bootStrap = false;
+                                Log.i(TAG, "Freedom");
+                            }
 
-                            nextWorkLimit.add(curWorkSum *
-                                    mPowerModel.suggestRate("gps"));
+                            nextWorkLimit.add(curWorkSum * newRate);
                         }
                         else if (mPolicy.equals(
                                     mPowerModel.WORKLOAD_POLICY)) 
